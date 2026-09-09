@@ -131,3 +131,23 @@ assert_contains "40-character" "a truncated SHA is refused" -- \
   "$SCRIPTS/publish-outcome-check.sh" --repo o/r --sha "0123456789abcdef" --name n \
   --conclusion neutral --title t --summary s
 assert_not_contains "--method" "nothing is written when the SHA is unusable" -- _calls
+
+# --- a re-run must not leave the grey check contradicting the summary ---------
+#
+# The first attempt on a commit publishes `neutral`. A re-run of the SAME
+# commit that reviews it successfully posts a summary beside that check. One
+# commit carrying both is the defect this whole check exists to fix, so the
+# summary path corrects it — and only corrects, never creates: a review that
+# worked the first time has nothing to say here and stays silent.
+
+it "corrects a check run an earlier attempt on this commit left behind"
+_setup '{"total_count":1,"check_runs":[{"id":31,"name":"AI review outcome"}]}'
+_publish --only-if-exists --conclusion success >/dev/null 2>&1
+assert_equal "updated" "$(_state)" "the stale neutral check was corrected"
+assert_contains "check-runs/31 --method PATCH" "the existing check run was patched" -- _calls
+
+it "creates nothing when no earlier attempt published one"
+_setup '{"total_count":0,"check_runs":[]}'
+_publish --only-if-exists --conclusion success >/dev/null 2>&1
+assert_equal "absent" "$(_state)" "absent is distinguished from created"
+assert_not_contains "--method" "a review that worked the first time stays silent" -- _calls

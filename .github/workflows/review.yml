@@ -627,6 +627,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           # Same discipline as the verdict: the pessimistic answer is on disk
@@ -639,6 +640,22 @@ jobs:
           fi
           .claude-review-tooling/scripts/post-review.sh "${args[@]}"
           echo "posted=$(cat "$RUNNER_TEMP/posted")" >> "$GITHUB_OUTPUT"
+
+          # A re-run of the SAME push corrects itself. An earlier attempt on
+          # this commit may have published `AI review outcome` as `neutral`; a
+          # summary has now landed beside it, and one commit carrying two
+          # signals that contradict each other is the defect this check exists
+          # to fix, not a smaller version of it. `--only-if-exists` creates
+          # nothing, so a first attempt that succeeds stays as quiet as it is
+          # today, and a caller without `checks: write` is unaffected.
+          if [ "$(cat "$RUNNER_TEMP/posted")" = true ]; then
+            .claude-review-tooling/scripts/publish-outcome-check.sh \
+              --repo "$GITHUB_REPOSITORY" --sha "$HEAD_SHA" \
+              --name "$OUTCOME_CHECK_NAME" --conclusion success \
+              --title "AI review completed" \
+              --summary "An earlier attempt on this commit could not review it. This one did, and its summary is on the pull request." \
+              --only-if-exists || true
+          fi
 
       # One question, asked of the only step that can answer it: did a summary
       # comment actually land? `steps.summary.outputs.posted` is empty when that

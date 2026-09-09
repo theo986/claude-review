@@ -6,11 +6,17 @@
 #   publish-outcome-check.sh --repo OWNER/REPO --sha HEAD_SHA \
 #                            --name NAME --conclusion neutral \
 #                            --title TEXT --summary TEXT \
-#                            [--state-out FILE] [--dry-run]
+#                            [--only-if-exists] [--state-out FILE] [--dry-run]
 #
 # Upserts one check run of NAME on HEAD_SHA: PATCH the one already there,
 # POST otherwise. Writes one word to --state-out — `created`, `updated`,
-# `denied` or `failed` — and never fails the job.
+# `absent`, `denied` or `failed` — and never fails the job.
+#
+# --only-if-exists updates a check run already on this SHA and creates none.
+# That is how a re-run corrects itself: the first attempt published `neutral`,
+# the second one reviewed the same commit successfully, and the grey check
+# would otherwise sit there contradicting the summary that just landed beside
+# it. A run that never published one has nothing to correct.
 #
 # WHY THIS EXISTS. A review that could not happen concluded the job in
 # `success`, so the check went green and read exactly like a review that ran
@@ -53,6 +59,7 @@ title=""
 summary=""
 state_out=""
 dry_run=0
+only_if_exists=0
 
 die() { printf 'publish-outcome-check: %s\n' "$1" >&2; exit 1; }
 
@@ -66,7 +73,8 @@ while [ "$#" -gt 0 ]; do
     --summary)    [ "$#" -ge 2 ] || die "--summary requires a value";    summary="$2";    shift 2 ;;
     --state-out)  [ "$#" -ge 2 ] || die "--state-out requires a value";  state_out="$2";  shift 2 ;;
     --dry-run)    dry_run=1; shift ;;
-    -h|--help)    sed -n '2,44p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --only-if-exists) only_if_exists=1; shift ;;
+    -h|--help)    sed -n '2,50p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)            die "unknown argument: $1" ;;
   esac
 done
@@ -157,6 +165,9 @@ if [ -n "$existing_id" ]; then
   endpoint="repos/${repo}/check-runs/${existing_id}"
   method="PATCH"
   done_state="updated"
+elif [ "$only_if_exists" -eq 1 ]; then
+  state="absent"
+  finish
 else
   endpoint="repos/${repo}/check-runs"
   method="POST"

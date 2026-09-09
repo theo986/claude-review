@@ -326,7 +326,11 @@ The notice comment is deliberately **not** sticky, unlike the summary. It says
 "no summary was posted for this push", which is a fact about one push; three
 pushes that went unreviewed are three separate facts and collapsing them would
 erase two. The check run is the opposite — it is addressed by name on the head
-SHA, so a re-run of the same push updates it in place instead of stacking.
+SHA, so a re-run of the same push updates it in place instead of stacking, and
+a re-run that then reviews the commit successfully turns the grey check green
+rather than leaving it to contradict the summary that just landed. That
+correction only ever updates a check run an earlier attempt published; a review
+that worked the first time creates nothing.
 
 ## The eval harness cannot catch environment-assumption errors
 
