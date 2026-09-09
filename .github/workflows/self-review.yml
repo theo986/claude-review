@@ -26,5 +26,7 @@ jobs:
       # released `v1` tag. Without this the workflow logic under review would
       # run against the previously-shipped prompts, which is not dogfooding.
       tooling_ref: ${{ github.event.pull_request.head.sha }}
+      # Fork test rig: the head SHA only exists here.
+      tooling_repo: theo986/claude-review
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
