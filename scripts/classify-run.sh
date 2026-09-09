@@ -120,3 +120,5 @@ if subtype == "success" and is_error is False:
 emit("unavailable",
      "the CLI did not finish (subtype=%s, is_error=%s)" % (subtype, is_error))
 PY
+
+# KOR-351 reproduction: a reviewable change, so the review is attempted.
